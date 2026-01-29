@@ -12,35 +12,31 @@ This project demonstrates an AI-powered CI/CD pipeline that can detect failures,
 ## How to Run Locally
 
 ### Prerequisites
-- Docker Desktop (or Minikube)
-- Python 3.11+
+- Docker Desktop (active and running)
+- PowerShell
 - OpenAI API Key
 - GitHub Token (Repo scope)
 
-### 1. Build Docker Images
-```bash
-# Build Sample App
-docker build -t sample-app:latest ./sample-app
-
-# Build AI Agent
-docker build -t ai-agent:latest ./ai-agent
+### 1. Configure Secrets
+Copy the template and fill in your API keys:
+```powershell
+cp secrets_template.yaml secrets.yaml
+# Open secrets.yaml and add your keys
 ```
 
-### 2. Deploy to Kubernetes (Local)
-```bash
-# Apply Secrets (Edit this file first or create manually!)
-# kubectl create secret generic ai-agent-secrets --from-literal=OPENAI_API_KEY=sk-...
-
-# Apply Manifests
-kubectl apply -f sample-app/k8s/
-kubectl apply -f ai-agent/k8s/
+### 2. Run Setup Script (One-Click Deploy)
+We have provided a PowerShell script that handles building images, pushing them (if configured), and deploying to your local cluster.
+```powershell
+.\setup_local.ps1
 ```
 
-### 3. Test the AI Healing
-1. Port-forward the AI Agent:
-   ```bash
-   kubectl port-forward svc/ai-agent 8000:8000
-   ```
+### 3. Verification
+The script will tell you how to access the services. Typically:
+1. **Sample App**: `http://localhost:8080` (Run `kubectl port-forward svc/sample-app 8080:80`)
+2. **AI Agent**: `http://localhost:8000/docs` (Run `kubectl port-forward svc/ai-agent 8000:80`)
+
+### 4. Test the AI Healing
+1. Port-forward the AI Agent (if not already done).
 2. Send a Mock Healing Request:
    ```bash
    curl -X POST http://localhost:8000/heal \
@@ -52,7 +48,7 @@ kubectl apply -f ai-agent/k8s/
        "branch": "main"
      }'
    ```
-3. Watch the logss:
+3. Watch the logs:
    ```bash
    kubectl logs -f -l app=ai-agent
    ```
