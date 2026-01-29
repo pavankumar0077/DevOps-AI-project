@@ -1,0 +1,74 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  # For local dev/demo, we often simulate this or use a simplified approach
+  # In a real scenario, this connects to the K8s cluster
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate version
+      id: version
+      run: echo "version=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+    # In a real environment, we would build and push Docker images here
+    - name: Mock Docker Build
+      run: echo "Building ${{ env.DOCKER_USERNAME }}/sample-app:${{ steps.version.outputs.version }}"
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        cd sample-app
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+
+    - name: Run tests
+      run: |
+        cd sample-app
+        # This will fail if SIMULATE_FAILURE env is set in the test context
+        pytest tests/ || echo "TESTS_FAILED=true" >> $GITHUB_ENV
+
+    - name: Trigger AI Healing on Test Failure
+      if: env.TESTS_FAILED == 'true'
+      run: |
+        echo "🚨 Tests Failed! Triggering AI Agent..."
+        # In a real world, this logic calls the AI agent webhook
+        # curl -X POST ${{ secrets.AI_AGENT_URL }}/heal ...
+        
+        # Determine failure type for demo
+        echo "Failure detected. Payload preparation simulated."
+
+  deploy:
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    if: success() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Mock Deployment
+      run: echo "Deploying version ${{ needs.build.outputs.version }} to Production K8s Cluster"

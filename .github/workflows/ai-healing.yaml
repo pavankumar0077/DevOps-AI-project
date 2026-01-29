@@ -1,0 +1,22 @@
+name: Manual AI Healing Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Failed Run ID to Heal'
+        required: true
+      failure_reason:
+        description: 'Simulated Reason'
+        required: false
+        default: 'Unit Test Failure'
+
+jobs:
+  trigger-healing:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Call AI Agent
+      run: |
+        echo "Calling AI Agent for Run ID ${{ inputs.run_id }}..."
+        # This would curl the actual agent
+        # curl -X POST http://ai-agent-url/heal -d '{"run_id": "${{ inputs.run_id }}", ...}'
