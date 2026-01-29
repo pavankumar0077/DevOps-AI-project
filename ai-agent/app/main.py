@@ -1,6 +1,6 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from app.services.healing import AIHealingAgent
+from app.agent import AIHealingAgent
 import os
 import logging
 
