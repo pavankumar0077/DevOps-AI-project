@@ -306,3 +306,7 @@ Response format (JSON ONLY):
                     "text": f"❌ AI Healing failed for run #{request_data['run_id']}: {error}"
                 }
             )
+
+    def get_stats(self):
+        """Return healing statistics"""
+        return self.healing_stats
