@@ -54,6 +54,19 @@ jobs:
     #   with:
     #     python-version: '3.11'
 
+    - name: Debug Environment
+      run: |
+        echo "HOSTNAME: $env:COMPUTERNAME"
+        echo "USERNAME: $env:USERNAME"
+        echo "Check python command:"
+        Get-Command python -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+        echo "Check py command:"
+        Get-Command py -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+        echo "Check where python:"
+        where.exe python
+        echo "PATH:"
+        echo $env:PATH
+
     - name: Install dependencies
       run: |
         cd sample-app
