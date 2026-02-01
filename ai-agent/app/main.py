@@ -13,7 +13,7 @@ app = FastAPI(title="AI Healing Agent")
 # Initialize Agent
 # In a real app, we might want to do this lazily or with dependency injection
 agent = AIHealingAgent(
-    github_token=os.getenv("GITHUB_TOKEN"),
+    github_token=os.getenv("AIDEVOPS_TOKEN"),
     openai_key=os.getenv("OPENAI_API_KEY"),
     slack_webhook=os.getenv("SLACK_WEBHOOK_URL")
 )

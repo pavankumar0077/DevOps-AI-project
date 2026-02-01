@@ -15,7 +15,7 @@ This project demonstrates an AI-powered CI/CD pipeline that can detect failures,
 - Docker Desktop (active and running)
 - PowerShell
 - OpenAI API Key
-- GitHub Token (Repo scope)
+- GitHub Token (Repo scope) - saved as `AIDEVOPS_TOKEN` in secrets
 
 ### 1. Configure Secrets
 Copy the template and fill in your API keys:
