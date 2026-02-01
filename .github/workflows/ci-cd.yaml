@@ -9,7 +9,7 @@ on:
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   # For local dev/demo, we often simulate this or use a simplified approach
-  # In a real scenario, this connects to the K8s cluster - YES
+  # In a real scenario, this connects to the K8s cluster - Before deploying to K8s cluster, we need to set up the cluster and configure the K8s cluster to connect to the Docker Hub.
 
 jobs:
   build:
