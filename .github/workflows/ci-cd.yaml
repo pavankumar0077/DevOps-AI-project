@@ -57,14 +57,14 @@ jobs:
     - name: Install dependencies
       run: |
         cd sample-app
-        & "C:\Users\USER\AppData\Local\Microsoft\WindowsApps\python.exe" -m pip install -r requirements.txt
-        & "C:\Users\USER\AppData\Local\Microsoft\WindowsApps\python.exe" -m pip install pytest pytest-cov
+        & "C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe" -m pip install -r requirements.txt
+        & "C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe" -m pip install pytest pytest-cov
 
     - name: Run tests
       run: |
         cd sample-app
         # This will fail if SIMULATE_FAILURE env is set in the test context
-        & "C:\Users\USER\AppData\Local\Microsoft\WindowsApps\python.exe" -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        & "C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe" -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
 
     - name: Trigger AI Healing on Test Failure
       if: env.TESTS_FAILED == 'true'
