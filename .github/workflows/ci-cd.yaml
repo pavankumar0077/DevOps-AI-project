@@ -8,8 +8,6 @@ on:
 
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-  # For local dev/demo, we often simulate this or use a simplified approach
-  # In a real scenario, this connects to the K8s cluster - Before deploying to K8s cluster..
 
 jobs:
   build:
@@ -37,7 +35,6 @@ jobs:
       run: |
         docker build -t ${{ env.DOCKER_USERNAME }}/sample-app:${{ steps.version.outputs.version }} ./sample-app
         docker push ${{ env.DOCKER_USERNAME }}/sample-app:${{ steps.version.outputs.version }}
-        # Also push latest tag for convenience
         docker tag ${{ env.DOCKER_USERNAME }}/sample-app:${{ steps.version.outputs.version }} ${{ env.DOCKER_USERNAME }}/sample-app:latest
         docker push ${{ env.DOCKER_USERNAME }}/sample-app:latest
 
@@ -49,35 +46,43 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # - name: Set up Python
-    #   uses: actions/setup-python@v4
-    #   with:
-    #     python-version: '3.11'
-
     - name: Debug Environment
       run: |
         echo "HOSTNAME: $env:COMPUTERNAME"
         echo "USERNAME: $env:USERNAME"
-        echo "Check python command:"
+        echo "Check python (where & launcher):"
+        where.exe python || echo "where python returned non-zero"
+        where.exe py || echo "where py returned non-zero"
+        Write-Host "Get-Command python (if present):"
         Get-Command python -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-        echo "Check py command:"
+        Write-Host "Get-Command py (if present):"
         Get-Command py -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-        echo "Check where python:"
-        where.exe python
+        py -3 --version 2>$null || echo "py launcher not found or failed"
         echo "PATH:"
         echo $env:PATH
+      shell: pwsh
+
+    # Optional fallback: uncomment to force-download a Python runtime if `py` is not present
+    # - name: Set up Python (fallback)
+    #   if: always() && !contains(steps.debug.outputs.some_marker, 'py-present') # placeholder, not active
+    #   uses: actions/setup-python@v4
+    #   with:
+    #     python-version: '3.11'
 
     - name: Install dependencies
       run: |
         cd sample-app
-        & "C:\Users\USER\AppData\Local\Programs\Python\Python310\python.exe" -m pip install -r requirements.txt
-        & "C:\Users\USER\AppData\Local\Programs\Python\Python310\python.exe" -m pip install pytest pytest-cov
+        py -3 -m pip install --upgrade pip
+        py -3 -m pip install -r requirements.txt
+        py -3 -m pip install pytest pytest-cov
+      shell: pwsh
 
     - name: Run tests
       run: |
         cd sample-app
-        # This will fail if SIMULATE_FAILURE env is set in the test context
-        & "C:\Users\USER\AppData\Local\Programs\Python\Python310\python.exe" -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        # Run pytest. On failure, set TESTS_FAILED so the later step triggers.
+        py -3 -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+      shell: pwsh
 
     - name: Trigger AI Healing on Test Failure
       if: env.TESTS_FAILED == 'true'
@@ -85,6 +90,7 @@ jobs:
         echo "🚨 Tests Failed! Triggering AI Agent..."
         curl -X POST ${{ secrets.AI_AGENT_URL }}/heal -H "Content-Type: application/json" -d "{\"repo\": \"${{ github.repository }}\", \"run_id\": \"${{ github.run_id }}\", \"job\": \"test\", \"branch\": \"${{ github.ref_name }}\", \"failure_type\": \"test_failure\"}"
         echo "Failure detected. Payload preparation simulated."
+      shell: pwsh
 
   deploy:
     needs: [build, test]
