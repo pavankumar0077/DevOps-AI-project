@@ -56,32 +56,121 @@ jobs:
         Write-Host "HOSTNAME: $env:COMPUTERNAME"
         Write-Host "USERNAME: $env:USERNAME"
         Write-Host "Check python (where & launcher):"
-        where.exe python || Write-Host "where python returned non-zero"
-        where.exe py || Write-Host "where py returned non-zero"
+
+        where.exe python > $null 2>&1
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "where python returned non-zero"
+        } else {
+          Write-Host "where python succeeded"
+        }
+
+        where.exe py > $null 2>&1
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "where py returned non-zero"
+        } else {
+          Write-Host "where py succeeded"
+        }
+
         Write-Host "Get-Command python (if present):"
-        Get-Command python -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+        try {
+          $p = Get-Command python -ErrorAction Stop
+          Write-Host $p.Source
+        } catch {
+          Write-Host "Get-Command python not found"
+        }
+
         Write-Host "Get-Command py (if present):"
-        Get-Command py -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+        try {
+          $p2 = Get-Command py -ErrorAction Stop
+          Write-Host $p2.Source
+        } catch {
+          Write-Host "Get-Command py not found"
+        }
+
         Write-Host "pwsh present?"
-        where.exe pwsh || Write-Host "pwsh not found"
+        where.exe pwsh > $null 2>&1
+        if ($LASTEXITCODE -ne 0) { Write-Host "pwsh not found" } else { Write-Host "pwsh found" }
+
         Write-Host "powershell present?"
-        Get-Command powershell -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-        py -3 --version 2>$null || Write-Host "py launcher not found or failed"
+        try {
+          $ps = Get-Command powershell -ErrorAction Stop
+          Write-Host $ps.Source
+        } catch {
+          Write-Host "powershell command not found"
+        }
+
+        & py -3 --version 2>$null
+        if ($LASTEXITCODE -ne 0) { Write-Host "py launcher not available or failed" } else { Write-Host "py -3 OK" }
+
         Write-Host "PATH:"
         Write-Host $env:PATH
+      shell: powershell
+
+    - name: Detect Python and set PY_CMD
+      id: detect-python
+      run: |
+        # Prefer the py launcher
+        where.exe py > $null 2>&1
+        if ($LASTEXITCODE -eq 0) {
+          echo "PY_CMD=py" >> $env:GITHUB_ENV
+          echo "PY_ARGS=-3" >> $env:GITHUB_ENV
+          Write-Host "Selected: py -3"
+          exit 0
+        }
+
+        # Fallback to python on PATH
+        where.exe python > $null 2>&1
+        if ($LASTEXITCODE -eq 0) {
+          echo "PY_CMD=python" >> $env:GITHUB_ENV
+          echo "PY_ARGS=" >> $env:GITHUB_ENV
+          Write-Host "Selected: python"
+          exit 0
+        }
+
+        # Fallback to a common explicit path (adjust if your python.exe is elsewhere)
+        $explicit = 'C:\Users\USER\AppData\Local\Programs\Python\Python310\python.exe'
+        if (Test-Path $explicit) {
+          echo "PY_CMD=$explicit" >> $env:GITHUB_ENV
+          echo "PY_ARGS=" >> $env:GITHUB_ENV
+          Write-Host "Selected explicit: $explicit"
+          exit 0
+        }
+
+        Write-Host "No usable Python found (py, python, or explicit path)."
+        exit 1
       shell: powershell
 
     - name: Install dependencies
       run: |
         cd sample-app
-        py -3 -m pip install --upgrade pip
-        py -3 -m pip install -r requirements.txt
-        py -3 -m pip install pytest pytest-cov
+
+        if ($env:PY_CMD -eq 'py') {
+          py -3 -m pip install --upgrade pip
+          py -3 -m pip install -r requirements.txt
+          py -3 -m pip install pytest pytest-cov
+        } elseif ($env:PY_CMD -eq 'python') {
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest pytest-cov
+        } else {
+          # PY_CMD is an explicit path to python.exe
+          & "$env:PY_CMD" -m pip install --upgrade pip
+          & "$env:PY_CMD" -m pip install -r requirements.txt
+          & "$env:PY_CMD" -m pip install pytest pytest-cov
+        }
+      shell: powershell
 
     - name: Run tests
       run: |
         cd sample-app
-        py -3 -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        if ($env:PY_CMD -eq 'py') {
+          py -3 -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        } elseif ($env:PY_CMD -eq 'python') {
+          python -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        } else {
+          & "$env:PY_CMD" -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        }
+      shell: powershell
 
     - name: Trigger AI Healing on Test Failure
       if: env.TESTS_FAILED == 'true'
