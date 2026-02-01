@@ -11,10 +11,10 @@ env:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, windows]
     outputs:
       version: ${{ steps.version.outputs.version }}
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -24,6 +24,7 @@ jobs:
       run: |
         $version = "$(Get-Date -Format 'yyyyMMdd-HHmmss')-$($env:GITHUB_SHA.Substring(0,7))"
         echo "version=$version" >> $env:GITHUB_OUTPUT
+      shell: powershell
 
     - name: Login to Docker Hub
       uses: docker/login-action@v3
@@ -37,37 +38,38 @@ jobs:
         docker push ${{ env.DOCKER_USERNAME }}/sample-app:${{ steps.version.outputs.version }}
         docker tag ${{ env.DOCKER_USERNAME }}/sample-app:${{ steps.version.outputs.version }} ${{ env.DOCKER_USERNAME }}/sample-app:latest
         docker push ${{ env.DOCKER_USERNAME }}/sample-app:latest
+      shell: powershell
 
   test:
     needs: build
-    runs-on: self-hosted
-    
+    runs-on: [self-hosted, windows]
+    defaults:
+      run:
+        shell: powershell
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Debug Environment
       run: |
-        echo "HOSTNAME: $env:COMPUTERNAME"
-        echo "USERNAME: $env:USERNAME"
-        echo "Check python (where & launcher):"
-        where.exe python || echo "where python returned non-zero"
-        where.exe py || echo "where py returned non-zero"
+        Write-Host "HOSTNAME: $env:COMPUTERNAME"
+        Write-Host "USERNAME: $env:USERNAME"
+        Write-Host "Check python (where & launcher):"
+        where.exe python || Write-Host "where python returned non-zero"
+        where.exe py || Write-Host "where py returned non-zero"
         Write-Host "Get-Command python (if present):"
         Get-Command python -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
         Write-Host "Get-Command py (if present):"
         Get-Command py -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-        py -3 --version 2>$null || echo "py launcher not found or failed"
-        echo "PATH:"
-        echo $env:PATH
-      shell: pwsh
-
-    # Optional fallback: uncomment to force-download a Python runtime if `py` is not present
-    # - name: Set up Python (fallback)
-    #   if: always() && !contains(steps.debug.outputs.some_marker, 'py-present') # placeholder, not active
-    #   uses: actions/setup-python@v4
-    #   with:
-    #     python-version: '3.11'
+        Write-Host "pwsh present?"
+        where.exe pwsh || Write-Host "pwsh not found"
+        Write-Host "powershell present?"
+        Get-Command powershell -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+        py -3 --version 2>$null || Write-Host "py launcher not found or failed"
+        Write-Host "PATH:"
+        Write-Host $env:PATH
+      shell: powershell
 
     - name: Install dependencies
       run: |
@@ -75,28 +77,32 @@ jobs:
         py -3 -m pip install --upgrade pip
         py -3 -m pip install -r requirements.txt
         py -3 -m pip install pytest pytest-cov
-      shell: pwsh
 
     - name: Run tests
       run: |
         cd sample-app
-        # Run pytest. On failure, set TESTS_FAILED so the later step triggers.
         py -3 -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
-      shell: pwsh
 
     - name: Trigger AI Healing on Test Failure
       if: env.TESTS_FAILED == 'true'
       run: |
-        echo "🚨 Tests Failed! Triggering AI Agent..."
-        curl -X POST ${{ secrets.AI_AGENT_URL }}/heal -H "Content-Type: application/json" -d "{\"repo\": \"${{ github.repository }}\", \"run_id\": \"${{ github.run_id }}\", \"job\": \"test\", \"branch\": \"${{ github.ref_name }}\", \"failure_type\": \"test_failure\"}"
-        echo "Failure detected. Payload preparation simulated."
-      shell: pwsh
+        Write-Host "🚨 Tests Failed! Triggering AI Agent..."
+        Invoke-RestMethod -Method Post -Uri "${{ secrets.AI_AGENT_URL }}/heal" -ContentType "application/json" -Body (ConvertTo-Json @{
+          repo = "${{ github.repository }}"
+          run_id = "${{ github.run_id }}"
+          job = "test"
+          branch = "${{ github.ref_name }}"
+          failure_type = "test_failure"
+        })
+        Write-Host "Failure detected. Payload prepared."
+      shell: powershell
 
   deploy:
     needs: [build, test]
-    runs-on: self-hosted
+    runs-on: [self-hosted, windows]
     if: success() && github.ref == 'refs/heads/develop-1'
-    
+
     steps:
     - name: Mock Deployment
-      run: echo "Deploying version ${{ needs.build.outputs.version }} to Production K8s Cluster"
+      run: Write-Host "Deploying version ${{ needs.build.outputs.version }} to Production K8s Cluster"
+      shell: powershell
