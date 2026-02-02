@@ -101,7 +101,10 @@ jobs:
       run: |
         cd sample-app
         # This will fail if SIMULATE_FAILURE env is set in the test context
-        & "$env:PY_CMD" -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        & "$env:PY_CMD" -m pytest tests/
+        if ($LASTEXITCODE -ne 0) {
+          echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        }
       shell: powershell
 
     - name: Trigger AI Healing on Test Failure
