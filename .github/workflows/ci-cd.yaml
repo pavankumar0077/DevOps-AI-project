@@ -51,21 +51,57 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-
+    - name: Setup Portable Python
+      id: setup-python
+      run: |
+        $dest = "$env:GITHUB_WORKSPACE\python_dist"
+        $pythonObj = "$dest\python.exe"
+        
+        if (Test-Path $pythonObj) {
+            Write-Host "Python already exists at $pythonObj"
+        } else {
+            $url = "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip"
+            $zip = "$dest\python.zip"
+            
+            New-Item -ItemType Directory -Force -Path $dest | Out-Null
+            
+            Write-Host "Downloading Python 3.11..."
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            Invoke-WebRequest -Uri $url -OutFile $zip
+            
+            Write-Host "Extracting..."
+            Expand-Archive -Path $zip -DestinationPath $dest -Force
+            
+            # Enable 'import site' for pip support
+            $pth = "$dest\python311._pth"
+            if (Test-Path $pth) {
+                (Get-Content $pth).Replace("#import site", "import site") | Set-Content $pth
+            }
+            
+            # Install pip
+            Write-Host "Installing pip..."
+            Invoke-WebRequest -Uri https://bootstrap.pypa.io/get-pip.py -OutFile "$dest\get-pip.py"
+            & $pythonObj "$dest\get-pip.py" --no-warn-script-location
+        }
+        
+        echo "PY_CMD=$pythonObj" >> $env:GITHUB_ENV
+        # Add Scripts to PATH so pip modules are found if needed
+        echo "$dest\Scripts" >> $env:GITHUB_PATH
+      shell: powershell
 
     - name: Install dependencies
       run: |
         cd sample-app
-        & "C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe" -m pip install --upgrade pip
-        & "C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe" -m pip install -r requirements.txt
-        & "C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe" -m pip install pytest pytest-cov
+        & "$env:PY_CMD" -m pip install --upgrade pip
+        & "$env:PY_CMD" -m pip install -r requirements.txt
+        & "$env:PY_CMD" -m pip install pytest pytest-cov
       shell: powershell
 
     - name: Run tests
       run: |
         cd sample-app
         # This will fail if SIMULATE_FAILURE env is set in the test context
-        & "C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe" -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
+        & "$env:PY_CMD" -m pytest tests/ || echo "TESTS_FAILED=true" >> $env:GITHUB_ENV
       shell: powershell
 
     - name: Trigger AI Healing on Test Failure
