@@ -30,5 +30,5 @@ def test_failure_mode(client):
     # Reload app context or just check logic if possible, 
     # but flask env vars are usually read at start. 
     # For unit test we can mock, but here we just want to ensure code is present.
-    # Intentional failure to trigger AI Agent
-    assert False, "Simulated Failure to Trigger AI Healing" 
+    # Intentional failure reverted
+    pass 
