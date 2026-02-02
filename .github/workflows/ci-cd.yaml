@@ -100,6 +100,9 @@ jobs:
     - name: Run tests
       run: |
         cd sample-app
+        # Add current directory to PYTHONPATH so 'src' module can be found
+        $env:PYTHONPATH = ".;$env:PYTHONPATH"
+        
         # This will fail if SIMULATE_FAILURE env is set in the test context
         & "$env:PY_CMD" -m pytest tests/
         if ($LASTEXITCODE -ne 0) {
