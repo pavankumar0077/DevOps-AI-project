@@ -1,5 +1,10 @@
 import pytest
 import os
+import sys
+
+# Ensure 'src' is importable by adding parent dir to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.app import app
 
 @pytest.fixture
