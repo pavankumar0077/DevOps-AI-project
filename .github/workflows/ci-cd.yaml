@@ -130,6 +130,17 @@ jobs:
     if: success() && github.ref == 'refs/heads/develop-1'
 
     steps:
-    - name: Mock Deployment
-      run: Write-Host "Deploying version ${{ needs.build.outputs.version }} to Production K8s Cluster"
+    - name: Deploy to Local K8s
+      run: |
+        Write-Host "Deploying version ${{ needs.build.outputs.version }} to Local K8s Cluster"
+        
+        # Check if kubectl is available (should be on self-hosted runner)
+        kubectl version --client
+        
+        # Update the image in the deployment
+        # Note: 'sample-app' is the deployment name, 'app' is the container name
+        kubectl set image deployment/sample-app app=${{ env.DOCKER_USERNAME }}/sample-app:${{ needs.build.outputs.version }}
+        
+        # Verify rollout status
+        kubectl rollout status deployment/sample-app
       shell: powershell
