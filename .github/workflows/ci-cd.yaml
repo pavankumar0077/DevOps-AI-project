@@ -140,7 +140,7 @@ jobs:
         # Check if kubectl is available (should be on self-hosted runner)
         kubectl version --client
         
-        # Update the image in the deployment
+        # Update the image in the deployment in local cluster
         # Note: 'sample-app' is the deployment name, 'app' is the container name
         kubectl set image deployment/sample-app app=${{ env.DOCKER_USERNAME }}/sample-app:${{ needs.build.outputs.version }}
         
