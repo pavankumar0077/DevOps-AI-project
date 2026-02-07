@@ -134,6 +134,9 @@ jobs:
       run: |
         Write-Host "Deploying version ${{ needs.build.outputs.version }} to Local K8s Cluster"
         
+        # Explicitly set KUBECONFIG to ensure kubectl finds the cluster
+        $env:KUBECONFIG = "C:\Users\USER\.kube\config"
+        
         # Check if kubectl is available (should be on self-hosted runner)
         kubectl version --client
         
