@@ -144,6 +144,6 @@ jobs:
         # Note: 'sample-app' is the deployment name, 'app' is the container name
         kubectl set image deployment/sample-app app=${{ env.DOCKER_USERNAME }}/sample-app:${{ needs.build.outputs.version }}
         
-        # Verify rollout status
+        # Verify rollout status in local cluster
         kubectl rollout status deployment/sample-app
       shell: powershell
